@@ -3,12 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Paperback &amp; Pour{% endblock %}</title>
+  <title>{% block title %}Ledger · Paperback &amp; Pour{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <header><p>Paperback &amp; Pour</p><h1>Small business ledger</h1></header>
-  <main>{% block content %}{% endblock %}</main>
-  <footer>Classroom records · Amounts are whole US dollars</footer>
+  <a class="skip-link" href="#main">Skip to ledger</a>
+  <header class="site-header">
+    <div class="brand">
+      <span class="wordmark">Paperback &amp; Pour</span>
+      <h1>Ledger</h1>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary" id="open-guide" aria-haspopup="dialog">How it works</button>
+      <button type="button" class="btn btn-primary js-add-record" aria-haspopup="dialog">Add record</button>
+    </div>
+  </header>
+  <main id="main" tabindex="-1">{% block content %}{% endblock %}</main>
+  <footer class="site-footer">Classroom records. Amounts are whole US dollars.</footer>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

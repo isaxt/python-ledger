@@ -54,3 +54,11 @@ def expense_totals_by_category():
         "SELECT category, SUM(amount) AS total FROM expenses "
         "GROUP BY category ORDER BY total DESC, category"
     )
+
+
+def category_suggestions():
+    """Categories already used in either table, so users can reuse them consistently."""
+    rows = query(
+        "SELECT category FROM expenses UNION SELECT category FROM revenues ORDER BY category"
+    )
+    return [row["category"] for row in rows]

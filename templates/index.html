@@ -1,53 +1,230 @@
 {% extends "base.html" %}
+{% macro signed(n) %}{% if n < 0 %}&minus;${{ (n|abs)|money }}{% elif n > 0 %}+${{ n|money }}{% else %}${{ n|money }}{% endif %}{% endmacro %}
 {% block content %}
-<section class="summary" aria-label="Summary">
-  <div><h2>Total revenue</h2><p><strong>${{ summary.revenue }}</strong></p></div>
-  <div><h2>Total expenses</h2><p><strong>${{ summary.expenses }}</strong></p></div>
-  <div><h2>Net cash flow</h2><p class="{{ 'negative' if summary.net < 0 else 'positive' }}"><strong>{{ '-' if summary.net < 0 }}${{ summary.net|abs }}</strong></p></div>
+
+{% if saved %}
+<div class="notice" id="saved-message" role="status" tabindex="-1">
+  <p><strong>Record saved.</strong>
+  {% if saved == "revenue" %}
+    It's now in <a href="#revenue-history">Money in</a> and counted in Total revenue and Net cash flow.
+  {% else %}
+    It's now in <a href="#expense-history">Money out</a> and counted in Spending by category, Total expenses and Net cash flow.
+  {% endif %}</p>
+  <button type="button" class="icon-btn" id="dismiss-notice" aria-label="Dismiss message">&times;</button>
+</div>
+{% endif %}
+
+<section class="overview" aria-labelledby="net-heading" id="summary">
+  <div class="net">
+    <h2 id="net-heading" class="label">Net cash flow</h2>
+    {% if not revenues and not expenses %}
+      <p class="net-figure">$0</p>
+      <p class="net-sentence">Nothing is recorded yet, so every figure here is zero. That isn't an error. <button type="button" class="text-btn js-add-record" data-type="revenue">Add your first record</button> and this page will start to fill in.</p>
+    {% else %}
+      <p class="net-figure {{ 'is-negative' if summary.net < 0 else 'is-positive' if summary.net > 0 }}">
+        {{ signed(summary.net) }}
+        <span class="state-tag">{% if summary.net > 0 %}Ahead{% elif summary.net < 0 %}Behind{% else %}Even{% endif %}</span>
+      </p>
+      <p class="net-sentence">
+        {% if summary.net > 0 %}Recorded revenue is ${{ summary.net|money }} more than recorded expenses.
+        {% elif summary.net < 0 %}Recorded expenses are ${{ (summary.net|abs)|money }} more than recorded revenue.
+        {% else %}Recorded revenue and recorded expenses are equal.{% endif %}
+      </p>
+    {% endif %}
+
+    {% set total = summary.revenue + summary.expenses %}
+    <div class="ribbon" role="img" aria-label="Revenue ${{ summary.revenue|money }}, expenses ${{ summary.expenses|money }}">
+      {% if total > 0 %}
+        {% if summary.revenue > 0 %}<span class="ribbon-in" style="flex-grow: {{ summary.revenue }}"></span>{% endif %}{% if summary.expenses > 0 %}<span class="ribbon-out" style="flex-grow: {{ summary.expenses }}"></span>{% endif %}
+      {% else %}<span class="ribbon-empty"></span>{% endif %}
+    </div>
+    <dl class="totals">
+      <div><dt><span class="swatch swatch-in" aria-hidden="true"></span>Total revenue</dt><dd>${{ summary.revenue|money }}</dd><dd class="hint">Money recorded as coming in</dd></div>
+      <div><dt><span class="swatch swatch-out" aria-hidden="true"></span>Total expenses</dt><dd>${{ summary.expenses|money }}</dd><dd class="hint">Money recorded as going out</dd></div>
+    </dl>
+    <details class="explain">
+      <summary>How is this calculated?</summary>
+      <p>Net cash flow = total revenue &minus; total expenses. It adds up every record in the ledger, with no date range. It's a quick look at recorded activity, not a measure of profit or a substitute for accounting advice.</p>
+    </details>
+  </div>
+
+  <div class="categories" id="category-totals" aria-labelledby="category-heading">
+    <h2 id="category-heading">Spending by category</h2>
+    <p class="hint">Where the money going out was spent, largest first. Bars compare each category to the biggest one.</p>
+    {% if category_totals %}
+    {% set biggest = category_totals[0]['total'] %}
+    <ul class="bars">
+      {% for row in category_totals %}
+      <li>
+        <div class="bar-head"><span>{{ row['category'] }}</span><span class="num">${{ row['total']|money }}</span></div>
+        <div class="bar-track" aria-hidden="true"><span style="width: {{ (row['total'] * 100 / biggest)|round(1) if biggest else 0 }}%"></span></div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty">
+      <p>Category totals will appear once you have recorded expenses.</p>
+      <button type="button" class="btn btn-secondary js-add-record" data-type="expense">Add an expense</button>
+    </div>
+    {% endif %}
+  </div>
 </section>
-<section><h2>Add a record</h2>
-<form method="post">
-  <label>Type
-    <select name="record_type" required>
-      <option value="expense">Expense</option>
-      <option value="revenue">Revenue</option>
-    </select>
-  </label>
-  <label>Date <input type="date" name="entry_date" required></label>
-  <label>Description <input name="description" required></label>
-  <label>Category <input name="category" required></label>
-  <label>Amount ($, whole dollars) <input type="number" name="amount" min="0" step="1" required></label>
-  <button type="submit">Save record</button>
-</form>
+
+<section class="history" id="revenue-history" aria-labelledby="revenue-heading">
+  <div class="history-head">
+    <h2 id="revenue-heading">Money in <span class="count">{{ revenues|length }} {{ 'record' if revenues|length == 1 else 'records' }}</span></h2>
+    <p class="hint">Revenue, newest first.</p>
+  </div>
+  {% if revenues %}
+  <table class="ledger">
+    <thead><tr><th scope="col">Date</th><th scope="col">Description</th><th scope="col">Category</th><th scope="col" class="num">Amount</th></tr></thead>
+    <tbody>
+      {% for r in revenues %}
+      <tr><td class="c-date" data-label="Date">{{ r['entry_date'] }}</td><td class="c-desc">{{ r['description'] }}</td><td class="c-cat"><span class="badge">{{ r['category'] }}</span></td><td class="c-amt num amt-in"><span class="visually-hidden">Revenue </span>+${{ r['amount']|money }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <p>No revenue recorded yet. Add your first entry to start tracking money coming in.</p>
+    <button type="button" class="btn btn-secondary js-add-record" data-type="revenue">Add revenue</button>
+  </div>
+  {% endif %}
 </section>
-<section><h2>Expenses</h2>
-<table>
-  <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount ($)</th></tr></thead>
-  <tbody>
-    {% for expense in expenses %}
-    <tr><td>{{ expense['entry_date'] }}</td><td>{{ expense['description'] }}</td><td>{{ expense['category'] }}</td><td>{{ expense['amount'] }}</td></tr>
-    {% else %}<tr><td colspan="4">No expenses yet. Add the first record.</td></tr>{% endfor %}
-  </tbody>
-</table>
+
+<section class="history" id="expense-history" aria-labelledby="expense-heading">
+  <div class="history-head">
+    <h2 id="expense-heading">Money out <span class="count">{{ expenses|length }} {{ 'record' if expenses|length == 1 else 'records' }}</span></h2>
+    <p class="hint">Expenses, newest first.</p>
+  </div>
+  {% if expenses %}
+  <table class="ledger">
+    <thead><tr><th scope="col">Date</th><th scope="col">Description</th><th scope="col">Category</th><th scope="col" class="num">Amount</th></tr></thead>
+    <tbody>
+      {% for e in expenses %}
+      <tr><td class="c-date" data-label="Date">{{ e['entry_date'] }}</td><td class="c-desc">{{ e['description'] }}</td><td class="c-cat"><span class="badge">{{ e['category'] }}</span></td><td class="c-amt num amt-out"><span class="visually-hidden">Expense </span>&minus;${{ e['amount']|money }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <p>No expenses recorded yet. Add an entry to see where your business is spending.</p>
+    <button type="button" class="btn btn-secondary js-add-record" data-type="expense">Add an expense</button>
+  </div>
+  {% endif %}
 </section>
-<section><h2>Revenue</h2>
-<table>
-  <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount ($)</th></tr></thead>
-  <tbody>
-    {% for revenue in revenues %}
-    <tr><td>{{ revenue['entry_date'] }}</td><td>{{ revenue['description'] }}</td><td>{{ revenue['category'] }}</td><td>{{ revenue['amount'] }}</td></tr>
-    {% else %}<tr><td colspan="4">No revenue yet. Add the first record.</td></tr>{% endfor %}
-  </tbody>
-</table>
-</section>
-<section><h2>Expenses by category</h2>
-<table>
-  <thead><tr><th>Category</th><th>Total ($)</th></tr></thead>
-  <tbody>
-    {% for row in category_totals %}
-    <tr><td>{{ row['category'] }}</td><td>{{ row['total'] }}</td></tr>
-    {% else %}<tr><td colspan="2">No expenses yet.</td></tr>{% endfor %}
-  </tbody>
-</table>
-</section>
+
+<dialog id="record-dialog" class="sheet" aria-labelledby="record-title" {% if errors %}data-open-on-load{% endif %}>
+  <form method="post" id="record-form" class="sheet-body" action="{{ url_for('index') }}">
+    <div class="sheet-head">
+      <h2 id="record-title">Add a record</h2>
+      <button type="button" class="icon-btn" id="close-record" aria-label="Close without saving">&times;</button>
+    </div>
+
+    {% if errors %}
+    <div class="form-errors" role="alert">
+      <p><strong>This record wasn't saved. Please fix:</strong></p>
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <fieldset class="segmented">
+      <legend>Type</legend>
+      <label><input type="radio" name="record_type" value="revenue" {{ 'checked' if form.record_type == 'revenue' }}><span><b>Revenue</b><small>Money coming in</small></span></label>
+      <label><input type="radio" name="record_type" value="expense" {{ 'checked' if form.record_type != 'revenue' }}><span><b>Expense</b><small>Money going out</small></span></label>
+    </fieldset>
+
+    <div class="field"><label for="f-date">Date</label>
+      <input id="f-date" type="date" name="entry_date" required value="{{ form.entry_date or '' }}"></div>
+    <div class="field"><label for="f-desc">Description</label>
+      <input id="f-desc" name="description" required maxlength="120" placeholder="e.g. Afternoon sales" value="{{ form.description or '' }}"></div>
+    <div class="field"><label for="f-cat">Category</label>
+      <input id="f-cat" name="category" required maxlength="60" list="category-options" autocomplete="off" aria-describedby="cat-hint" placeholder="e.g. Sales or Supplies" value="{{ form.category or '' }}">
+      <datalist id="category-options">{% for name in categories %}<option value="{{ name }}">{% endfor %}</datalist>
+      <p class="hint" id="cat-hint">Reuse the same name each time so the category totals stay accurate.</p></div>
+    <div class="field"><label for="f-amt">Amount</label>
+      <div class="money-input"><span aria-hidden="true">$</span><input id="f-amt" type="number" name="amount" min="0" step="1" required inputmode="numeric" aria-describedby="amt-hint" value="{{ form.amount or '' }}"></div>
+      <p class="hint" id="amt-hint">Whole dollars, no cents.</p></div>
+
+    <p class="outcome" id="outcome" aria-live="polite"></p>
+    <div class="sheet-actions">
+      <button type="button" class="btn btn-secondary" id="cancel-record">Cancel</button>
+      <button type="submit" class="btn btn-primary">Save record</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="guide" aria-labelledby="guide-title">
+ <div class="guide-body">
+  <form method="dialog" class="guide-chrome">
+    <p class="step-count" id="step-count" aria-live="polite"></p>
+    <button type="submit" class="text-btn" id="skip-guide" value="skip">Skip introduction</button>
+  </form>
+  <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+  <div class="step" data-step="1" tabindex="-1">
+    <h2 id="guide-title">Welcome to your ledger</h2>
+    <p>Think of this ledger as a running record of your business's money. Each entry helps you see what came in, what went out, and where it went.</p>
+    <ul class="flow">
+      <li><strong>Record money earned.</strong> This is <em>revenue</em>: sales, payments from customers.</li>
+      <li><strong>Record money spent.</strong> This is an <em>expense</em>: stock, supplies, rent.</li>
+      <li><strong>Organize into categories</strong> like Sales or Supplies.</li>
+      <li><strong>Review the picture</strong> at the top of the page.</li>
+    </ul>
+  </div>
+
+  <div class="step" data-step="2" tabindex="-1" hidden>
+    <h2>What makes a record</h2>
+    <p>Every entry has five parts:</p>
+    <dl>
+      <dt>Type</dt><dd>Is the money coming into the business (revenue) or going out (expense)?</dd>
+      <dt>Date</dt><dd>When did it happen?</dd>
+      <dt>Description</dt><dd>What was it for?</dd>
+      <dt>Category</dt><dd>What kind of income or expense was it?</dd>
+      <dt>Amount</dt><dd>How much, in whole dollars.</dd>
+    </dl>
+    <p class="example-label">Examples only. These are not real records and are not saved.</p>
+    <div class="examples">
+      <div><strong>Revenue</strong><br>Customer payment · Category: Sales · $250</div>
+      <div><strong>Expense</strong><br>Office supplies · Category: Supplies · $35</div>
+    </div>
+    <p>Use the same category names each time. Later you can see exactly how much went to each one.</p>
+  </div>
+
+  <div class="step" data-step="3" tabindex="-1" hidden>
+    <h2>Reading your dashboard</h2>
+    <dl>
+      <dt>Total revenue</dt><dd>All the money recorded as coming in.</dd>
+      <dt>Total expenses</dt><dd>All the money recorded as going out.</dd>
+      <dt>Net cash flow</dt><dd>The difference between the two.</dd>
+    </dl>
+    <p class="formula">Net cash flow = Total revenue − Total expenses</p>
+    <p>Example: $1,000 revenue − $650 expenses = <strong>$350</strong> net cash flow.</p>
+    <p>Positive means recorded revenue is higher than recorded expenses. Negative means recorded expenses are higher.</p>
+    <p><strong>Spending by category</strong> adds up expenses by category. <strong>Money in</strong> and <strong>Money out</strong> list each entry.</p>
+    <p class="hint">This is a basic overview of recorded activity. It is not a full measure of profit and not a substitute for professional accounting advice.</p>
+  </div>
+
+  <div class="step" data-step="4" tabindex="-1" hidden>
+    <h2>Make your first entry</h2>
+    <p>Choose <strong>Add record</strong>, pick Revenue or Expense, fill in the date, description, category and amount, then choose <strong>Save record</strong>.</p>
+    <p>You'll see a confirmation, the entry will appear in its list, and the totals update automatically.</p>
+    <p>You don't have to add anything now. Reopen this guide any time from <strong>How it works</strong>.</p>
+    <div class="actions-inline">
+      <button type="button" class="btn btn-primary" id="go-to-form">Add a record</button>
+      <button type="button" class="btn btn-secondary" id="finish-guide">Finish without adding</button>
+    </div>
+  </div>
+
+  <div class="guide-nav">
+    <button type="button" class="btn btn-secondary" id="back-step">Back</button>
+    <button type="button" class="btn btn-primary" id="next-step">Continue</button>
+  </div>
+ </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='ledger.js') }}"></script>
+<script src="{{ url_for('static', filename='onboarding.js') }}"></script>
 {% endblock %}

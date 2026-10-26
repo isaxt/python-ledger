@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Paperback &amp; Pour{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header><p>Paperback &amp; Pour</p><h1>Small business ledger</h1></header>
+  <main>{% block content %}{% endblock %}</main>
+  <footer>Classroom records · Amounts are whole US dollars</footer>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section><h2>Add an expense</h2>
+<form method="post">
+  <label>Date <input type="date" name="entry_date" required></label>
+  <label>Description <input name="description" required></label>
+  <label>Category <input name="category" required></label>
+  <label>Amount ($, whole dollars) <input type="number" name="amount" min="0" step="1" required></label>
+  <button type="submit">Save expense</button>
+</form>
+</section>
+<section><h2>Expenses</h2>
+<table>
+  <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount ($)</th></tr></thead>
+  <tbody>
+    {% for expense in expenses %}
+    <tr><td>{{ expense['entry_date'] }}</td><td>{{ expense['description'] }}</td><td>{{ expense['category'] }}</td><td>{{ expense['amount'] }}</td></tr>
+    {% else %}<tr><td colspan="4">No expenses yet. Add the first record.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</section>
+<section><h2>Product backlog</h2>
+<p>Sprint 1: record and display revenues.</p>
+<p>Sprint 2: show total revenue, total expenses, and net cash flow.</p>
+</section>
+{% endblock %}

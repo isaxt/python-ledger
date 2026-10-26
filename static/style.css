@@ -10,4 +10,9 @@ button:hover { background: #1c3f2e; }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 10px; text-align: left; border-bottom: 1px solid #d3dcd5; }
 .summary { display: flex; gap: 24px; flex-wrap: wrap; }
+.summary div { flex: 1; min-width: 160px; }
+.summary h2 { font-size: 1rem; margin: 0; }
+.summary p { font-size: 1.6rem; margin: 4px 0 0; }
+.negative { color: #a33a1d; }
+.positive { color: #315c48; }
 footer { font-size: .85rem; margin-top: 24px; }

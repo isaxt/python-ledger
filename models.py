@@ -31,5 +31,26 @@ def add_expense(entry_date, description, category, amount):
         (entry_date, description, category, amount),
     )
 
-# Sprint 1: add get_revenues() and add_revenue().
-# Sprint 2: add summary() with separate SUM queries for each table.
+def get_revenues():
+    return query("SELECT * FROM revenues ORDER BY entry_date DESC, id DESC")
+
+
+def add_revenue(entry_date, description, category, amount):
+    query(
+        "INSERT INTO revenues (entry_date, description, category, amount) VALUES (?, ?, ?, ?)",
+        (entry_date, description, category, amount),
+    )
+
+
+def summary():
+    """Separate SUMs (no join, so rows are never multiplied); empty tables give 0."""
+    revenue = query("SELECT COALESCE(SUM(amount), 0) AS total FROM revenues")[0]["total"]
+    expenses = query("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses")[0]["total"]
+    return {"revenue": revenue, "expenses": expenses, "net": revenue - expenses}
+
+
+def expense_totals_by_category():
+    return query(
+        "SELECT category, SUM(amount) AS total FROM expenses "
+        "GROUP BY category ORDER BY total DESC, category"
+    )

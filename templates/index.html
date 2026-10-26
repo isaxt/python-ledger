@@ -1,12 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
-<section><h2>Add an expense</h2>
+<section class="summary" aria-label="Summary">
+  <div><h2>Total revenue</h2><p><strong>${{ summary.revenue }}</strong></p></div>
+  <div><h2>Total expenses</h2><p><strong>${{ summary.expenses }}</strong></p></div>
+  <div><h2>Net cash flow</h2><p class="{{ 'negative' if summary.net < 0 else 'positive' }}"><strong>{{ '-' if summary.net < 0 }}${{ summary.net|abs }}</strong></p></div>
+</section>
+<section><h2>Add a record</h2>
 <form method="post">
+  <label>Type
+    <select name="record_type" required>
+      <option value="expense">Expense</option>
+      <option value="revenue">Revenue</option>
+    </select>
+  </label>
   <label>Date <input type="date" name="entry_date" required></label>
   <label>Description <input name="description" required></label>
   <label>Category <input name="category" required></label>
   <label>Amount ($, whole dollars) <input type="number" name="amount" min="0" step="1" required></label>
-  <button type="submit">Save expense</button>
+  <button type="submit">Save record</button>
 </form>
 </section>
 <section><h2>Expenses</h2>
@@ -19,8 +30,24 @@
   </tbody>
 </table>
 </section>
-<section><h2>Product backlog</h2>
-<p>Sprint 1: record and display revenues.</p>
-<p>Sprint 2: show total revenue, total expenses, and net cash flow.</p>
+<section><h2>Revenue</h2>
+<table>
+  <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount ($)</th></tr></thead>
+  <tbody>
+    {% for revenue in revenues %}
+    <tr><td>{{ revenue['entry_date'] }}</td><td>{{ revenue['description'] }}</td><td>{{ revenue['category'] }}</td><td>{{ revenue['amount'] }}</td></tr>
+    {% else %}<tr><td colspan="4">No revenue yet. Add the first record.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</section>
+<section><h2>Expenses by category</h2>
+<table>
+  <thead><tr><th>Category</th><th>Total ($)</th></tr></thead>
+  <tbody>
+    {% for row in category_totals %}
+    <tr><td>{{ row['category'] }}</td><td>{{ row['total'] }}</td></tr>
+    {% else %}<tr><td colspan="2">No expenses yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
 </section>
 {% endblock %}

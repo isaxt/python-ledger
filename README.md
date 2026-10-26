@@ -19,7 +19,7 @@ first start. It creates missing tables without deleting existing records.
 
 ## Already working
 
-- Expense form, saved database records, and expense list.
+- Expense and revenue forms, saved records, lists, totals, net cash flow, and expenses by category.
 - Both expenses and revenues tables.
 - Inherited base template and stylesheet.
 
